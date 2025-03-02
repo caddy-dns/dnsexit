@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/caddyserver/caddy/v2 v2.4.1
+	github.com/caddyserver/caddy/v2 v2.5.0
 	github.com/libdns/dnsexit v1.0.0
 )
 
@@ -23,7 +23,7 @@ require (
 	github.com/mholt/acmez v0.1.3 // indirect
 	github.com/miekg/dns v1.1.30 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.9.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.15.0 // indirect
 	github.com/prometheus/procfs v0.2.0 // indirect
@@ -35,5 +35,5 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )
