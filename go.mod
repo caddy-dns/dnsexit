@@ -1,4 +1,4 @@
-module github.com/caddy-dns/dnsexit
+module github.com/caddy-dns/dnsexit/v2
 
 go 1.26.1
 
