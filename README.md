@@ -35,13 +35,17 @@ or with the Caddyfile:
 ```
 # globally
 {
-	acme_dns dnsexit ...
+	acme_dns dnsexit {
+		api_token "YOUR_DNSEXIT_API_TOKEN"
+	}
 }
 ```
 
 ```
 # one site
 tls {
-	dns dnsexit ...
+	dns dnsexit {
+		api_token "YOUR_DNSEXIT_API_TOKEN"
+	}
 }
 ```
