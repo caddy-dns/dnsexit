@@ -1,0 +1,25 @@
+{
+	# Uncomment for verbose logs while setting up
+	# debug
+}
+
+# Shared TLS/ACME config for all sites in this file.
+(tls_dnsexit_common) {
+	tls {
+		dns dnsexit {
+			api_token {$DNSEXIT_API_KEY}
+		}
+	}
+}
+
+# Replace with real domains you control in DNSExit.
+# Caddy will request certificates using DNS-01 challenges.
+example.your-domain.tld {
+	import tls_dnsexit_common
+	respond "site one is running"
+}
+
+www.example.your-domain.tld {
+	import tls_dnsexit_common
+	respond "site two is running"
+}
