@@ -1,13 +1,18 @@
 package dnsexit
 
 import (
+	"context"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/libdns/dnsexit"
+	"github.com/libdns/libdns"
 )
 
 // Provider lets Caddy read and manipulate DNS records hosted by DNSExit.
-type Provider struct{ *dnsexit.Provider }
+type Provider struct {
+	*dnsexit.Provider
+}
 
 func init() {
 	caddy.RegisterModule(Provider{})
@@ -17,12 +22,15 @@ func init() {
 func (Provider) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "dns.providers.dnsexit",
-		New: func() caddy.Module { return &Provider{new(dnsexit.Provider)} },
+		New: func() caddy.Module { return &Provider{Provider: new(dnsexit.Provider)} },
 	}
 }
 
 // Provision sets up the module. Implements caddy.Provisioner.
 func (p *Provider) Provision(ctx caddy.Context) error {
+	if p.Provider == nil {
+		p.Provider = new(dnsexit.Provider)
+	}
 	p.Provider.APIKey = caddy.NewReplacer().ReplaceAll(p.Provider.APIKey, "")
 	return nil
 }
@@ -33,6 +41,9 @@ func (p *Provider) Provision(ctx caddy.Context) error {
 //	    api_token <api_token>
 //	}
 func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	if p.Provider == nil {
+		p.Provider = new(dnsexit.Provider)
+	}
 	for d.Next() {
 		if d.NextArg() {
 			p.Provider.APIKey = d.Val()
@@ -61,6 +72,22 @@ func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		return d.Err("missing API token")
 	}
 	return nil
+}
+
+func (p *Provider) GetRecords(ctx context.Context, zone string) ([]libdns.Record, error) {
+	return p.Provider.GetRecords(ctx, zone)
+}
+
+func (p *Provider) AppendRecords(ctx context.Context, zone string, records []libdns.Record) ([]libdns.Record, error) {
+	return p.Provider.AppendRecords(ctx, zone, records)
+}
+
+func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns.Record) ([]libdns.Record, error) {
+	return p.Provider.SetRecords(ctx, zone, records)
+}
+
+func (p *Provider) DeleteRecords(ctx context.Context, zone string, records []libdns.Record) ([]libdns.Record, error) {
+	return p.Provider.DeleteRecords(ctx, zone, records)
 }
 
 // Interface guards
