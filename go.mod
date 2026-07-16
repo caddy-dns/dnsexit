@@ -4,7 +4,7 @@ go 1.25.1
 
 require (
 	github.com/caddyserver/caddy/v2 v2.11.4
-	github.com/libdns/dnsexit v1.1.4
+	github.com/libdns/dnsexit v1.2.0
 	github.com/libdns/libdns v1.1.1
 )
 

@@ -11,6 +11,7 @@ For ACME DNS-01, set recursive resolvers explicitly in your Caddy `tls` block:
 ```caddyfile
 tls {
 	resolvers 1.1.1.1 8.8.8.8
+	propagation_timeout 10m
 }
 ```
 
@@ -25,9 +26,10 @@ dns.providers.dnsexit
 
 ## Supported configuration
 
-The provider currently supports a single setting:
+The provider supports:
 
-- `api_token`
+- `api_token` (required)
+- `zone` (optional, recommended when provider/account zone differs from ACME-discovered zone)
 
 Set `DNSEXIT_API_KEY` in your environment (or `.env` when using Docker Compose), and reference it from config. Do not paste secrets directly into the Caddyfile.
 
@@ -43,6 +45,10 @@ Global ACME DNS provider:
 }
 
 example.com {
+	tls {
+		resolvers 1.1.1.1 8.8.8.8
+		propagation_timeout 10m
+	}
 	respond "hello"
 }
 ```
@@ -52,8 +58,12 @@ Per-site DNS provider:
 ```caddyfile
 example.com {
 	tls {
+		resolvers 1.1.1.1 8.8.8.8
+		propagation_timeout 10m
 		dns dnsexit {
 			api_token {$DNSEXIT_API_KEY}
+			# Optional explicit zone override
+			zone example.com.
 		}
 	}
 	respond "hello"
@@ -65,8 +75,11 @@ Multi-site pattern with a shared ACME block:
 ```caddyfile
 (tls_dnsexit_common) {
 	tls {
+		resolvers 1.1.1.1 8.8.8.8
+		propagation_timeout 10m
 		dns dnsexit {
 			api_token {$DNSEXIT_API_KEY}
+			zone example.com.
 		}
 	}
 }
@@ -86,12 +99,30 @@ JSON config example:
 
 ```json
 {
-	"module": "acme",
-	"challenges": {
-		"dns": {
-			"provider": {
-				"name": "dnsexit",
-				"api_token": "{env.DNSEXIT_API_KEY}"
+	"apps": {
+		"tls": {
+			"automation": {
+				"policies": [
+					{
+						"subjects": ["example.com"],
+						"issuers": [
+							{
+								"module": "acme",
+								"challenges": {
+									"dns": {
+										"provider": {
+											"name": "dnsexit",
+											"api_token": "{env.DNSEXIT_API_KEY}",
+											"zone": "example.com."
+										},
+										"resolvers": ["1.1.1.1", "8.8.8.8"],
+										"propagation_timeout": "10m"
+									}
+								}
+							}
+						]
+					}
+				]
 			}
 		}
 	}
@@ -144,6 +175,8 @@ docker logs -f caddy-dnsexit
 
 ## Minimal docker-compose example
 
+Use one of the Caddyfile examples above for the TLS configuration; that is where the explicit `resolvers` and `propagation_timeout` settings belong.
+
 ```yaml
 services:
   caddy:
@@ -173,6 +206,8 @@ volumes:
 	- Why this can fail: if a configured resolver returns `REFUSED` during that SOA lookup chain, Caddy cannot determine the zone and ACME fails early.
 	- Important: this does not necessarily mean the DNSExit API write path is broken; it means the resolver path used for ACME checks is not compatible with this lookup flow.
 	- Recommended config: use public recursive resolvers in your Caddy TLS block (for example `1.1.1.1` and `8.8.8.8`) so SOA discovery and propagation checks complete reliably.
+	- Set `propagation_timeout 10m` by default in the `tls` block for ACME DNS-01 tests with this provider.
+	- Preferred zone-mismatch resolution: configure explicit `zone` in the provider block so DNSExit API updates always target your intended zone.
 	- Good starting config:
 
 ```caddyfile
@@ -182,25 +217,27 @@ volumes:
 	}
 }
 
-notes.megatno.com {
+notes.example.com {
 	tls {
 		dns dnsexit {
 			api_token {$DNSEXIT_API_KEY}
+			zone example.com.
 		}
 		resolvers 1.1.1.1 8.8.8.8
+		propagation_timeout 10m
 	}
 	reverse_proxy joplin:22300
 }
 ```
 
 	- Avoid using `127.0.0.53` (systemd-resolved stub), split-DNS overlays, or authoritative DNSExit nameservers as ACME resolvers. ACME needs recursive resolution for parent-zone SOA discovery.
-	- Why we still call this out: resolver `REFUSED` from DNSExit authoritative nameservers during ACME lookups is not ideal; the workaround is documented here so users can get reliable issuance.
+	- Provider behavior note: this module does not automatically retry alternate zones on API errors; if zone detection and account scope differ, set `zone` explicitly.
 	- Resolver health check (before first issuance):
 
 ```bash
 # Replace with your real host and zone
-HOST="notes.megatno.com"
-ZONE="megatno.com"
+HOST="notes.example.com"
+ZONE="example.com"
 
 for R in 1.1.1.1 8.8.8.8; do
   echo "=== @$R ==="

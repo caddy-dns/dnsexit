@@ -3,6 +3,7 @@ package dnsexit
 import (
 	"testing"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/libdns/dnsexit"
 )
@@ -28,15 +29,31 @@ func TestUnmarshalCaddyfileAcceptsAPIToken(t *testing.T) {
 	}
 }
 
-func TestUnmarshalCaddyfileRejectsZoneSubdirective(t *testing.T) {
+func TestUnmarshalCaddyfileAcceptsZoneSubdirective(t *testing.T) {
 	input := `dnsexit {
 		api_token test-token
 		zone example.com.
 	}`
 	p := &Provider{}
 	d := caddyfile.NewTestDispenser(input)
+	if err := p.UnmarshalCaddyfile(d); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if p.Provider.Zone != "example.com." {
+		t.Fatalf("expected zone to be parsed, got %q", p.Provider.Zone)
+	}
+}
+
+func TestUnmarshalCaddyfileRejectsDuplicateZone(t *testing.T) {
+	input := `dnsexit {
+		api_token test-token
+		zone example.com.
+		zone other.example.com.
+	}`
+	p := &Provider{}
+	d := caddyfile.NewTestDispenser(input)
 	if err := p.UnmarshalCaddyfile(d); err == nil {
-		t.Fatal("expected error for unsupported zone subdirective")
+		t.Fatal("expected error for duplicate zone subdirective")
 	}
 }
 
@@ -49,5 +66,15 @@ func TestUnmarshalCaddyfileRejectsHostSubdirective(t *testing.T) {
 	d := caddyfile.NewTestDispenser(input)
 	if err := p.UnmarshalCaddyfile(d); err == nil {
 		t.Fatal("expected error for unsupported host subdirective")
+	}
+}
+
+func TestProvisionNormalizesZoneTrailingDot(t *testing.T) {
+	p := &Provider{Provider: &dnsexit.Provider{APIKey: "token", Zone: "example.com"}}
+	if err := p.Provision(caddy.Context{}); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if p.Provider.Zone != "example.com." {
+		t.Fatalf("expected normalized zone with trailing dot, got %q", p.Provider.Zone)
 	}
 }
