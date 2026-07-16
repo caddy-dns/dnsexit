@@ -2,6 +2,7 @@ package dnsexit
 
 import (
 	"context"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -32,6 +33,10 @@ func (p *Provider) Provision(ctx caddy.Context) error {
 		p.Provider = new(dnsexit.Provider)
 	}
 	p.Provider.APIKey = caddy.NewReplacer().ReplaceAll(p.Provider.APIKey, "")
+	p.Provider.Zone = strings.TrimSpace(caddy.NewReplacer().ReplaceAll(p.Provider.Zone, ""))
+	if p.Provider.Zone != "" && !strings.HasSuffix(p.Provider.Zone, ".") {
+		p.Provider.Zone += "."
+	}
 	return nil
 }
 
@@ -39,6 +44,7 @@ func (p *Provider) Provision(ctx caddy.Context) error {
 //
 //	providername [<api_token>] {
 //	    api_token <api_token>
+//	    zone <zone>
 //	}
 func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	if p.Provider == nil {
@@ -59,6 +65,16 @@ func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				if d.NextArg() {
 					p.Provider.APIKey = d.Val()
+				}
+				if d.NextArg() {
+					return d.ArgErr()
+				}
+			case "zone":
+				if p.Provider.Zone != "" {
+					return d.Err("zone already set")
+				}
+				if d.NextArg() {
+					p.Provider.Zone = d.Val()
 				}
 				if d.NextArg() {
 					return d.ArgErr()
